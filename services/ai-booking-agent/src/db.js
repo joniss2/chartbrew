@@ -2,20 +2,37 @@ const mysql = require("mysql2/promise");
 
 let pool;
 
+const DB_NAME = process.env.DB_NAME || "booking_agent";
+
+function poolConfig(database) {
+  return {
+    host: process.env.DB_HOST || "db",
+    port: parseInt(process.env.DB_PORT, 10) || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database,
+    waitForConnections: true,
+    connectionLimit: 10,
+    charset: "utf8mb4",
+  };
+}
+
 async function getPool() {
   if (!pool) {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST || "db",
-      port: parseInt(process.env.DB_PORT, 10) || 3306,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME || "booking_agent",
-      waitForConnections: true,
-      connectionLimit: 10,
-      charset: "utf8mb4",
-    });
+    pool = mysql.createPool(poolConfig(DB_NAME));
   }
   return pool;
+}
+
+async function ensureDatabase() {
+  const tmp = mysql.createPool(poolConfig(undefined));
+  try {
+    await tmp.execute(
+      `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`
+    );
+  } finally {
+    await tmp.end();
+  }
 }
 
 async function initDb(retries = 30, delay = 2000) {
@@ -50,6 +67,17 @@ async function initDb(retries = 30, delay = 2000) {
       console.log("Database initialized successfully");
       return;
     } catch (err) {
+      if (err.code === "ER_BAD_DB_ERROR") {
+        console.log(`Database '${DB_NAME}' does not exist, attempting to create it...`);
+        try {
+          await ensureDatabase();
+          pool = null;
+          continue;
+        } catch (createErr) {
+          console.log(`Could not create database (user may lack CREATE privilege): ${createErr.message}`);
+        }
+      }
+
       if (attempt < retries) {
         console.log(`DB not ready (attempt ${attempt}/${retries}): ${err.message}`);
         await new Promise((r) => setTimeout(r, delay));

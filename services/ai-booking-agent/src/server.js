@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const PORT = parseInt(process.env.BOOKING_PORT, 10) || 3001;
-const PUBLIC_HOSTNAME = process.env.BOOKING_PUBLIC_HOSTNAME || "localhost";
+const PUBLIC_HOSTNAME = process.env.BOOKING_PUBLIC_HOSTNAME || "";
 const API_KEY = process.env.BOOKING_API_KEY || "";
 
 const conversations = new Map();
@@ -24,6 +24,10 @@ function requireApiKey(req, res, next) {
   }
   next();
 }
+
+const twilioWebhook = process.env.TWILIO_AUTH_TOKEN
+  ? twilio.webhook({ validate: true })
+  : (_req, _res, next) => next();
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
@@ -38,7 +42,15 @@ app.get("/appointments", requireApiKey, async (req, res) => {
   }
 });
 
-app.post("/twilio/voice", (req, res) => {
+app.post("/twilio/voice", twilioWebhook, (req, res) => {
+  if (!PUBLIC_HOSTNAME) {
+    console.error("BOOKING_PUBLIC_HOSTNAME is not set — Twilio cannot reach the WebSocket");
+    const twiml = new twilio.twiml.VoiceResponse();
+    twiml.say("Sorry, this service is not configured yet. Please try again later.");
+    res.type("text/xml");
+    return res.send(twiml.toString());
+  }
+
   const twiml = new twilio.twiml.VoiceResponse();
   const callSid = req.body.CallSid;
   const callerNumber = req.body.From || "unknown";
@@ -55,7 +67,7 @@ app.post("/twilio/voice", (req, res) => {
   res.send(twiml.toString());
 });
 
-app.post("/twilio/status", async (req, res) => {
+app.post("/twilio/status", twilioWebhook, async (req, res) => {
   const callSid = req.body.CallSid;
   const status = req.body.CallStatus;
 
@@ -124,6 +136,9 @@ wss.on("connection", (ws) => {
 });
 
 async function start() {
+  if (!PUBLIC_HOSTNAME) {
+    console.warn("WARNING: BOOKING_PUBLIC_HOSTNAME is not set. Twilio calls will not work until it points to a publicly reachable host.");
+  }
   await initDb();
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`Booking Agent listening on port ${PORT}`);

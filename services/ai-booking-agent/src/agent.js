@@ -56,6 +56,7 @@ async function handleConversation(messages, callerNumber, callSid) {
       });
     } catch (err) {
       console.error("Failed to save booking:", err.message);
+      return "I'm sorry, there was a problem saving your appointment. Please try calling again or contact us directly.";
     }
   }
 
