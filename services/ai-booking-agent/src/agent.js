@@ -49,6 +49,22 @@ function clearSession(callSid) {
   sessions.delete(callSid);
 }
 
+function truncateSession(callSid, utteranceUntilInterrupt) {
+  const messages = sessions.get(callSid);
+  if (!messages) return;
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'assistant' && typeof messages[i].content === 'string') {
+      const idx = messages[i].content.indexOf(utteranceUntilInterrupt);
+      if (idx !== -1) {
+        messages[i].content = messages[i].content.substring(0, idx + utteranceUntilInterrupt.length);
+        messages.splice(i + 1);
+        return;
+      }
+    }
+  }
+}
+
 async function handleUserSpeech({ callSid, callerNumber, text }) {
   const messages = getSession(callSid);
   messages.push({ role: 'user', content: text });
@@ -97,4 +113,4 @@ async function handleUserSpeech({ callSid, callerNumber, text }) {
   return msg.content;
 }
 
-module.exports = { handleUserSpeech, clearSession };
+module.exports = { handleUserSpeech, clearSession, truncateSession };

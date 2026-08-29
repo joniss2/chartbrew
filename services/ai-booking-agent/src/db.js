@@ -19,12 +19,35 @@ async function getPool() {
   return pool;
 }
 
+async function ensureDatabase() {
+  const dbName = process.env.DB_NAME || 'booking_agent';
+  const tempPool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT, 10) || 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    waitForConnections: true,
+    connectionLimit: 2,
+    charset: 'utf8mb4',
+  });
+
+  try {
+    await tempPool.execute(
+      `CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`
+    );
+  } finally {
+    await tempPool.end();
+  }
+}
+
 async function initDb() {
   const maxRetries = 10;
   const retryDelay = 3000;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      await ensureDatabase();
+
       const p = await getPool();
       await p.execute(`
         CREATE TABLE IF NOT EXISTS appointments (
