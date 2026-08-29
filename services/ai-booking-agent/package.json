@@ -1,0 +1,19 @@
+{
+  "name": "ai-booking-agent",
+  "version": "1.0.0",
+  "description": "KI-Telefonassistent zur Terminbuchung auf Basis von Twilio ConversationRelay + OpenAI",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.11.0",
+    "openai": "^4.60.0",
+    "twilio": "^5.3.0",
+    "ws": "^8.18.0"
+  }
+}
