@@ -85,18 +85,25 @@ async function handleUserSpeech({ callSid, callerNumber, text }) {
     for (const call of msg.tool_calls) {
       if (call.function.name === 'book_appointment') {
         const args = JSON.parse(call.function.arguments);
-        await createAppointment({
-          caller_number: callerNumber,
-          customer_name: args.customer_name,
-          service: args.service,
-          requested_time: args.requested_time,
-        });
-
-        messages.push({
-          role: 'tool',
-          tool_call_id: call.id,
-          content: `Termin gebucht für ${args.customer_name}, ${args.service}, ${args.requested_time}.`,
-        });
+        try {
+          await createAppointment({
+            caller_number: callerNumber,
+            customer_name: args.customer_name,
+            service: args.service,
+            requested_time: args.requested_time,
+          });
+          messages.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: `Termin gebucht für ${args.customer_name}, ${args.service}, ${args.requested_time}.`,
+          });
+        } catch (err) {
+          messages.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: `Fehler beim Buchen: ${err.message}`,
+          });
+        }
       }
     }
 
