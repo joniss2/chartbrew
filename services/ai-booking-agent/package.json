@@ -1,0 +1,18 @@
+{
+  "name": "ai-booking-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI phone booking agent with Twilio and OpenAI",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mysql2": "^3.12.0",
+    "openai": "^4.78.1",
+    "twilio": "^5.4.3",
+    "ws": "^8.18.0"
+  }
+}
