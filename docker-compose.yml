@@ -9,8 +9,10 @@ services:
       MYSQL_PASSWORD: ${CB_DB_PASSWORD}
       MYSQL_RANDOM_ROOT_PASSWORD: true
       MYSQL_DEFAULT_AUTH: caching_sha2_password
+      BOOKING_DB_NAME: ${BOOKING_DB_NAME:-booking_agent}
     volumes:
       - chartbrew-db:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -23,8 +25,11 @@ services:
     environment:
       CB_REDIS_HOST: redis
       REDIS_PASSWORD: ${CB_REDIS_PASSWORD}
-    ports:
-      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   chartbrew:
     build: .
@@ -39,10 +44,36 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     links:
       - db
       - redis
+
+  booking-agent:
+    build: ./services/ai-booking-agent
+    restart: unless-stopped
+    ports:
+      - ${BOOKING_PORT:-3001}:${BOOKING_PORT:-3001}
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${CB_DB_USERNAME}
+      DB_PASSWORD: ${CB_DB_PASSWORD}
+      DB_NAME: ${BOOKING_DB_NAME:-booking_agent}
+      BOOKING_PORT: ${BOOKING_PORT:-3001}
+      BOOKING_PUBLIC_HOSTNAME: ${BOOKING_PUBLIC_HOSTNAME:-localhost}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      BOOKING_OPENAI_API_KEY: ${BOOKING_OPENAI_API_KEY}
+      BOOKING_OPENAI_MODEL: ${BOOKING_OPENAI_MODEL:-gpt-4o-mini}
+      BUSINESS_NAME: ${BUSINESS_NAME:-My Business}
+      BUSINESS_HOURS: ${BUSINESS_HOURS:-Mon-Fri 9am-6pm}
+      BUSINESS_SERVICES: ${BUSINESS_SERVICES:-General}
+      BOOKING_API_KEY: ${BOOKING_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   chartbrew-db:
