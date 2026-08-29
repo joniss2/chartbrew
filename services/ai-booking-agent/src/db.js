@@ -77,8 +77,11 @@ async function initDb() {
     } catch (err) {
       if (attempt < maxRetries) {
         console.log(`MySQL nicht bereit (Versuch ${attempt}/${maxRetries}), warte ${retryDelay / 1000}s...`);
-        await new Promise((r) => setTimeout(r, retryDelay));
+        if (pool) {
+          try { await pool.end(); } catch (_) {}
+        }
         pool = null;
+        await new Promise((r) => setTimeout(r, retryDelay));
       } else {
         throw new Error(`MySQL nach ${maxRetries} Versuchen nicht erreichbar: ${err.message}`);
       }

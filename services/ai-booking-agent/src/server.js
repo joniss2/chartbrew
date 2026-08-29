@@ -15,7 +15,9 @@ function escapeXml(str) {
 }
 
 function requireApiKey(req, res, next) {
-  if (!API_KEY) return next();
+  if (!API_KEY) {
+    return res.status(503).json({ error: 'BOOKING_API_KEY nicht konfiguriert' });
+  }
   const provided = req.headers['x-api-key'] || req.query.api_key;
   if (provided !== API_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -71,7 +73,7 @@ server.on('upgrade', (request, socket, head) => {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (authToken) {
     const signature = request.headers['x-twilio-signature'];
-    const url = `https://${PUBLIC_HOSTNAME}/relay`;
+    const url = `wss://${PUBLIC_HOSTNAME}/relay`;
     if (!signature || !twilio.validateRequest(authToken, signature, url, {})) {
       socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
       socket.destroy();
@@ -153,12 +155,14 @@ wss.on('connection', (ws) => {
         default:
           break;
       }
+    }).catch((err) => {
+      console.error('Fehler bei der Verarbeitung der Relay-Nachricht:', err);
     });
   });
 
   ws.on('close', () => {
     closed = true;
-    processing.then(async () => {
+    processing.catch(() => {}).then(async () => {
       if (callSid) {
         try {
           await logCall({
