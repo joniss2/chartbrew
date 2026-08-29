@@ -70,6 +70,7 @@ services:
       BUSINESS_NAME: ${BUSINESS_NAME:-My Business}
       BUSINESS_HOURS: ${BUSINESS_HOURS:-Mon-Fri 9am-6pm}
       BUSINESS_SERVICES: ${BUSINESS_SERVICES:-General}
+      BOOKING_API_KEY: ${BOOKING_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

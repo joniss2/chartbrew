@@ -12,14 +12,24 @@ app.use(express.urlencoded({ extended: true }));
 
 const PORT = parseInt(process.env.BOOKING_PORT, 10) || 3001;
 const PUBLIC_HOSTNAME = process.env.BOOKING_PUBLIC_HOSTNAME || "localhost";
+const API_KEY = process.env.BOOKING_API_KEY || "";
 
 const conversations = new Map();
+
+function requireApiKey(req, res, next) {
+  if (!API_KEY) return next();
+  const provided = req.headers["x-api-key"] || req.query.api_key;
+  if (provided !== API_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/appointments", async (req, res) => {
+app.get("/appointments", requireApiKey, async (req, res) => {
   try {
     const rows = await listAppointments({ date: req.query.date, status: req.query.status });
     res.json(rows);
