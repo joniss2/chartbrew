@@ -84,8 +84,8 @@ async function handleUserSpeech({ callSid, callerNumber, text }) {
 
     for (const call of msg.tool_calls) {
       if (call.function.name === 'book_appointment') {
-        const args = JSON.parse(call.function.arguments);
         try {
+          const args = JSON.parse(call.function.arguments);
           await createAppointment({
             caller_number: callerNumber,
             customer_name: args.customer_name,
